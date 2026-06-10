@@ -1,0 +1,20 @@
+# ============================================================
+# DataPilot — 智能数据分析助手
+# ============================================================
+
+# --- LLM / Agent Framework ---
+langgraph>=0.2.0          # LangGraph 工作流编排（状态图定义 Agent 决策流程）
+langchain-core>=0.3.0     # LangChain 核心抽象（消息、工具接口等）
+langchain-anthropic>=0.2.0  # Anthropic Claude 模型集成
+
+# --- Data & Compute ---
+duckdb>=1.1.0             # 嵌入式 OLAP 数据库，本地 SQL 分析引擎
+pandas>=2.2.0             # 数据处理与表格操作
+matplotlib>=3.9.0         # 图表绘制
+
+# --- UI ---
+streamlit>=1.38.0         # Web 前端交互界面
+
+# --- Utilities ---
+python-dotenv>=1.0.0      # 从 .env 文件加载环境变量
+pydantic>=2.0.0           # 数据校验与结构化输出（工具参数 schema）

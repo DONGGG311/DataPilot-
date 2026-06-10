@@ -160,7 +160,7 @@ def main() -> int:
     parser_ask.add_argument(
         "--model",
         default=None,
-        help="Claude 模型名称（默认从 MODEL_NAME 环境变量读取）",
+        help="模型名称（默认从 LLM_MODEL 环境变量读取）",
     )
     parser_ask.set_defaults(func=cmd_ask)
 

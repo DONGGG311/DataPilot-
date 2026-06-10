@@ -77,12 +77,10 @@ def render_sidebar(db_manager: DuckDBManager) -> str:
         # ---- 模型选择 ----
         st.subheader("⚙️ 模型设置")
         model_options = [
-            "claude-sonnet-4-6",
-            "claude-opus-4-8",
-            "claude-haiku-4-5",
-            "claude-3-5-sonnet-20241022",
+            "deepseek-chat",
+            "deepseek-reasoner",
         ]
-        default_model = os.getenv("MODEL_NAME", DEFAULT_MODEL)
+        default_model = os.getenv("LLM_MODEL", DEFAULT_MODEL)
         # 确保默认值在列表中
         if default_model not in model_options:
             default_index = 0
@@ -90,10 +88,10 @@ def render_sidebar(db_manager: DuckDBManager) -> str:
             default_index = model_options.index(default_model)
 
         selected_model = st.selectbox(
-            "Claude 模型",
+            "DeepSeek 模型",
             options=model_options,
             index=default_index,
-            help="选择用于分析推理的 Claude 模型。不同模型在速度、成本、能力上有所差异。",
+            help="选择用于分析推理的 DeepSeek 模型。",
         )
 
         st.markdown("---")
@@ -260,14 +258,14 @@ def render_chat(db_manager: DuckDBManager, selected_model: str) -> None:
     st.caption("用自然语言描述分析需求，AI Agent 自动规划、查询、计算并生成图表。")
 
     # ---- 检查 API Key ----
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
-    if not api_key or api_key == "your_api_key_here":
+    api_key = os.getenv("DEEPSEEK_API_KEY", "")
+    if not api_key or api_key == "your_deepseek_api_key_here":
         st.error(
-            "⚠️ 未检测到有效的 ANTHROPIC_API_KEY。\n\n"
+            "⚠️ 未检测到有效的 DEEPSEEK_API_KEY。\n\n"
             "请在项目根目录的 `.env` 文件中填入你的真实 API Key:\n"
-            "```\nANTHROPIC_API_KEY=sk-ant-api03-...\n```\n"
-            "获取 API Key: https://console.anthropic.com/\n\n"
-            "当前使用的是 `.env.example` 中的占位符 `your_api_key_here`，请替换为真实 Key。"
+            "```\nDEEPSEEK_API_KEY=sk-...\n```\n"
+            "获取 API Key: https://platform.deepseek.com/api_keys\n\n"
+            "当前使用的是 `.env.example` 中的占位符，请替换为真实 Key。"
         )
         st.stop()
 
@@ -282,23 +280,12 @@ def render_chat(db_manager: DuckDBManager, selected_model: str) -> None:
                 st.session_state.current_model = selected_model
             except Exception as e:
                 err_msg = str(e)
-                if "403" in err_msg or "forbidden" in err_msg.lower():
+                if "401" in err_msg or "403" in err_msg or "forbidden" in err_msg.lower() or "unauthorized" in err_msg.lower():
                     st.error(
-                        f"❌ 初始化 Agent 失败: API 访问被拒绝 (403 Forbidden)\n\n"
+                        f"❌ 初始化 Agent 失败: API 认证失败\n\n"
                         f"**可能原因:**\n"
-                        f"1. API Key 无效或过期 → 检查 `.env` 中的 ANTHROPIC_API_KEY\n"
-                        f"2. 地域网络限制 → 需要配置代理访问 Anthropic API\n\n"
-                        f"**解决方法:**\n\n"
-                        f"方式一 — HTTP 代理:\n"
-                        f"```bash\n"
-                        f"# 在终端中设置后重新启动 Streamlit\n"
-                        f"export HTTPS_PROXY=http://127.0.0.1:7890\n"
-                        f"streamlit run src/ui/app.py\n"
-                        f"```\n\n"
-                        f"方式二 — API 中继:\n"
-                        f"在 `.env` 中配置:\n"
-                        f"```\nANTHROPIC_BASE_URL=https://your-api-relay.com\n```\n\n"
-                        f"详细说明见 `.env.example` 文件。\n\n"
+                        f"1. API Key 无效或过期 → 检查 `.env` 中的 DEEPSEEK_API_KEY\n"
+                        f"2. API Key 余额不足 → 前往 https://platform.deepseek.com 充值\n\n"
                         f"原始错误: {e}"
                     )
                 else:
@@ -378,13 +365,13 @@ def render_chat(db_manager: DuckDBManager, selected_model: str) -> None:
             except Exception as e:
                 status_placeholder.empty()
                 err_str = str(e)
-                if "403" in err_str or "forbidden" in err_str.lower():
+                if "401" in err_str or "403" in err_str or "forbidden" in err_str.lower() or "unauthorized" in err_str.lower():
                     error_msg = (
-                        f"❌ API 访问被拒绝 (403 Forbidden)\n\n"
-                        f"**可能原因:** API Key 无效 / 地域网络限制\n\n"
+                        f"❌ API 认证失败\n\n"
+                        f"**可能原因:** API Key 无效 / 余额不足\n\n"
                         f"**解决办法:**\n"
-                        f"1. 检查 `.env` 中 ANTHROPIC_API_KEY 是否为真实 Key（非占位符）\n"
-                        f"2. 如在中国大陆使用，需配置代理 → 详见 `.env.example`\n\n"
+                        f"1. 检查 `.env` 中 DEEPSEEK_API_KEY 是否为真实 Key（非占位符）\n"
+                        f"2. 前往 https://platform.deepseek.com 检查账户余额\n\n"
                         f"原始错误: {e}"
                     )
                 else:

@@ -270,6 +270,10 @@ def execute_python_code(code: str, context_df_csv: str = "") -> str:
     matplotlib.use("Agg")  # 非交互后端
     import matplotlib.pyplot as plt
 
+    # 中文字体配置
+    plt.rcParams['font.sans-serif'] = ['SimHei']
+    plt.rcParams['axes.unicode_minus'] = False
+
     # 受限的全局命名空间
     safe_globals = {
         "__builtins__": {
@@ -362,6 +366,10 @@ def generate_chart(
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import numpy as np
+
+    # 中文字体配置
+    plt.rcParams['font.sans-serif'] = ['SimHei']
+    plt.rcParams['axes.unicode_minus'] = False
 
     # ---- 解析输入数据 ----
     try:

@@ -5,7 +5,8 @@
 # --- LLM / Agent Framework ---
 langgraph>=0.2.0          # LangGraph 工作流编排（状态图定义 Agent 决策流程）
 langchain-core>=0.3.0     # LangChain 核心抽象（消息、工具接口等）
-langchain-anthropic>=0.2.0  # Anthropic Claude 模型集成
+langchain-openai>=0.2.0     # OpenAI 兼容模型集成（DeepSeek 兼容此接口）
+openai>=1.0.0               # OpenAI SDK（DeepSeek 兼容此接口）
 
 # --- Data & Compute ---
 duckdb>=1.1.0             # 嵌入式 OLAP 数据库，本地 SQL 分析引擎

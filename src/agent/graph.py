@@ -33,7 +33,7 @@ import logging
 import os
 from typing import Annotated, Literal, Optional
 
-from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import (
     AIMessage,
     BaseMessage,
@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 # 常量
 # ================================================================
 
-DEFAULT_MODEL = "claude-3-5-sonnet-20241022"
+DEFAULT_MODEL = "deepseek-chat"
 MAX_EXECUTOR_RETRIES = 2  # 单步执行失败后的最大重试次数
 
 # ================================================================
@@ -140,35 +140,27 @@ class AgentState(BaseModel):
 # ================================================================
 
 
-def _make_llm(model_name: Optional[str] = None) -> ChatAnthropic:
+def _make_llm(model_name: Optional[str] = None) -> ChatOpenAI:
     """
-    创建 ChatAnthropic 实例。
+    创建 ChatOpenAI 实例（兼容 DeepSeek API）。
 
-    支持通过环境变量配置代理：
-    - ANTHROPIC_BASE_URL  — API 中继/反代地址
-    - HTTPS_PROXY / HTTP_PROXY — HTTP 代理（httpx 自动识别）
+    DeepSeek API 兼容 OpenAI 格式，通过 base_url 和 api_key 配置。
 
     Args:
-        model_name: 模型名称；默认从环境变量 MODEL_NAME 读取，
+        model_name: 模型名称；默认从环境变量 LLM_MODEL 读取，
                     回退到 DEFAULT_MODEL。
     """
-    effective_model = model_name or os.getenv("MODEL_NAME", DEFAULT_MODEL)
+    effective_model = model_name or os.getenv("LLM_MODEL", DEFAULT_MODEL)
 
-    # 构建 kwargs，仅在有值时传入
     kwargs: dict = dict(
         model=effective_model,
-        temperature=0.1,
-        max_tokens=4096,
+        api_key=os.getenv("DEEPSEEK_API_KEY"),
+        base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
+        temperature=0,
     )
 
-    # 检查自定义 API 地址（代理/中继）
-    base_url = os.getenv("ANTHROPIC_BASE_URL")
-    if base_url:
-        kwargs["base_url"] = base_url
-        logger.info("使用自定义 API 地址: %s", base_url)
-
-    logger.info("初始化 ChatAnthropic，模型: %s", effective_model)
-    return ChatAnthropic(**kwargs)
+    logger.info("初始化 ChatOpenAI (DeepSeek)，模型: %s", effective_model)
+    return ChatOpenAI(**kwargs)
 
 
 def _format_available_context(state: AgentState) -> str:
@@ -220,7 +212,7 @@ def _parse_tool_error(result: str) -> Optional[str]:
 # ================================================================
 
 
-def planner_node(state: AgentState, llm: ChatAnthropic) -> dict:
+def planner_node(state: AgentState, llm: ChatOpenAI) -> dict:
     """
     规划节点 —— 分析用户问题，生成分析步骤计划。
 
@@ -261,7 +253,7 @@ def planner_node(state: AgentState, llm: ChatAnthropic) -> dict:
     user_prompt = f"用户问题: {user_question}\n\n请生成分析计划。"
 
     try:
-        structured_llm = llm.with_structured_output(AnalysisPlan)
+        structured_llm = llm.with_structured_output(AnalysisPlan, method="function_calling")
         plan_result: AnalysisPlan = structured_llm.invoke(
             [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)]
         )
@@ -293,7 +285,7 @@ def planner_node(state: AgentState, llm: ChatAnthropic) -> dict:
         }
 
 
-def executor_node(state: AgentState, llm: ChatAnthropic) -> dict:
+def executor_node(state: AgentState, llm: ChatOpenAI) -> dict:
     """
     执行节点 —— 执行当前步骤（state.plan[state.current_step]）。
 
@@ -473,7 +465,7 @@ def executor_node(state: AgentState, llm: ChatAnthropic) -> dict:
     return {"current_step": step_idx + 1}
 
 
-def evaluator_node(state: AgentState, llm: ChatAnthropic) -> dict:
+def evaluator_node(state: AgentState, llm: ChatOpenAI) -> dict:
     """
     评估节点 —— 判断是否已完整回答用户问题。
 
@@ -522,7 +514,7 @@ def evaluator_node(state: AgentState, llm: ChatAnthropic) -> dict:
 请输出评估结论。"""
 
     try:
-        structured_llm = llm.with_structured_output(EvaluationResult)
+        structured_llm = llm.with_structured_output(EvaluationResult, method="function_calling")
         eval_result: EvaluationResult = structured_llm.invoke(
             [SystemMessage(content=system_prompt)]
         )
@@ -608,7 +600,7 @@ def build_graph(
 
     Args:
         db_manager: 已初始化的 DuckDBManager 实例（需调用方管理生命周期）。
-        model_name: Claude 模型名称；默认从 MODEL_NAME 环境变量读取。
+        model_name: 模型名称；默认从 LLM_MODEL 环境变量读取。
 
     Returns:
         未编译的 StateGraph 实例。
@@ -663,7 +655,7 @@ def compile_graph(
 
     Args:
         db_manager: DuckDBManager 实例。
-        model_name: Claude 模型名称。
+        model_name: 模型名称。
 
     Returns:
         编译后的 CompiledGraph 实例，可通过 .invoke() 或 .stream() 运行。
